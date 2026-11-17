@@ -1,0 +1,45 @@
+name: Build ZenFocus APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**.zip'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.9'
+
+      - name: Extract ZenFocus
+        run: |
+          unzip -q ZenFocus_Hybrid_JVM17_Fixed.zip -d extracted
+
+      - name: Build APK
+        run: |
+          gradle -p extracted/zenfocus_hybrid assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenFocus-APK
+          path: extracted/zenfocus_hybrid/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
