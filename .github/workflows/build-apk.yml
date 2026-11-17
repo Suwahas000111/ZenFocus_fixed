@@ -29,17 +29,34 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extract ZenFocus
+      - name: Find and extract ZIP
         run: |
-          unzip -q ZenFocus_Hybrid_JVM17_Fixed.zip -d extracted
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: No ZIP file found!"
+            exit 1
+          fi
+          echo "Found: $ZIP_FILE"
+          mkdir extracted
+          unzip -q "$ZIP_FILE" -d extracted
+
+      - name: Find Gradle project
+        run: |
+          SETTINGS=$(find extracted -name settings.gradle.kts -o -name settings.gradle | head -n 1)
+          if [ -z "$SETTINGS" ]; then
+            echo "ERROR: Gradle project not found!"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Found project: $PROJECT_DIR"
 
       - name: Build APK
-        run: |
-          gradle -p extracted/zenfocus_hybrid assembleDebug
+        run: gradle -p "$PROJECT_DIR" assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ZenFocus-APK
-          path: extracted/zenfocus_hybrid/app/build/outputs/apk/debug/*.apk
+          path: extracted/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
